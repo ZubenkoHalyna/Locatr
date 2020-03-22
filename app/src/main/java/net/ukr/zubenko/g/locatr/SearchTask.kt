@@ -8,13 +8,13 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.util.Log
 import java.io.IOException
+import java.util.*
 import kotlin.reflect.KFunction1
 
 
-class SearchTask(private val setBitmap: (Bitmap) -> Unit) : AsyncTask<Location, Void, Void>() {
-    var mGalleryItem: GalleryItem? = null
+class SearchTask(private val setBitmap: (Bitmap?, GalleryItem) -> Unit) : AsyncTask<Location, Void, Void>() {
+    lateinit var mGalleryItem: GalleryItem
     var mBitmap: Bitmap? = null
-
 
     companion object {
         private val TAG = "LocatrFragment"
@@ -26,22 +26,19 @@ class SearchTask(private val setBitmap: (Bitmap) -> Unit) : AsyncTask<Location, 
         if (items.isEmpty()) {
             return null
         }
-        mGalleryItem = items[0]
-        try {mGalleryItem?.let {
-            val bytes = fetchr.getUrlBytes(it.mUrl)
+
+        mGalleryItem = items[Random().nextInt(items.size)]
+        try {
+            val bytes = fetchr.getUrlBytes(mGalleryItem.mUrl)
             mBitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
-        }
         } catch (ioe: IOException) {
             Log.i(TAG, "Unable to download bitmap", ioe)
         }
-
 
         return null
     }
 
     override fun onPostExecute(result: Void?) {
-        mBitmap?.let { bitmap ->
-            setBitmap(bitmap)
-        }
+        setBitmap(mBitmap, mGalleryItem)
     }
 }

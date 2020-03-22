@@ -2,6 +2,9 @@ package net.ukr.zubenko.g.locatr
 
 import android.Manifest
 import android.annotation.SuppressLint
+import android.app.AlertDialog
+import android.app.Dialog
+import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 import android.view.*
@@ -10,13 +13,15 @@ import androidx.fragment.app.Fragment
 import com.google.android.gms.common.api.GoogleApiClient
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
-import android.os.Looper
+import android.widget.ProgressBar
 import com.google.android.gms.location.*
+import net.ukr.zubenko.g.photogallery.GalleryItem
 
 
 class LocatrFragment : Fragment() {
     private lateinit var mImageView: ImageView
-    private lateinit var mClient: GoogleApiClient
+    private lateinit var mProgressBar: ProgressBar
+    private lateinit var mGalleryItem: GalleryItem
     private lateinit var mFusedLocationClient: FusedLocationProviderClient
 
     companion object {
@@ -44,12 +49,25 @@ class LocatrFragment : Fragment() {
                 if (hasLocationPermission()) {
                     findImage()
                 } else {
+                    if (shouldShowRequestPermissionRationale(LOCATION_PERMISSIONS[0])) {
+                        createLocationPermissionDialog().show()
+                    } else
                     requestPermissions(LOCATION_PERMISSIONS, REQUEST_LOCATION_PERMISSIONS)
                 }
                 true
             }
             else -> super.onOptionsItemSelected(item)
         }
+
+    private fun createLocationPermissionDialog(): Dialog {
+        return AlertDialog.Builder(activity)
+            .setTitle(R.string.location_permission_title)
+            .setMessage(R.string.location_permission_request)
+            .setPositiveButton(android.R.string.ok) { _, _ ->
+                requestPermissions(LOCATION_PERMISSIONS, REQUEST_LOCATION_PERMISSIONS)
+            }
+            .create()
+    }
 
     private fun hasLocationPermission(): Boolean {
         val result = activity?.checkSelfPermission(LOCATION_PERMISSIONS[0]) ?: false
@@ -61,8 +79,9 @@ class LocatrFragment : Fragment() {
             REQUEST_LOCATION_PERMISSIONS -> {
                 if (hasLocationPermission()) {
                     findImage()
+                } else {
+                    super.onRequestPermissionsResult(requestCode, permissions, grantResults)
                 }
-                super.onRequestPermissionsResult(requestCode, permissions, grantResults)
             }
             else -> super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         }
@@ -79,25 +98,46 @@ class LocatrFragment : Fragment() {
             override fun onLocationResult(locationResult: LocationResult?) {
                 super.onLocationResult(locationResult)
 
+                mImageView.visibility = View.GONE
+                mProgressBar.visibility = View.VISIBLE
+
                 locationResult?.lastLocation?.let { location ->
                     Log.i(TAG, "Got a fix: ${location.latitude}, ${location.longitude}")
-                    SearchTask(::setBitmap).execute(location)
+                    SearchTask(::searchTaskCallback).execute(location)
                 }
             }
         }
 
         mFusedLocationClient.requestLocationUpdates(request, callback, null)
-
-
     }
 
-    fun setBitmap(bitmap: Bitmap) {
-        mImageView.setImageBitmap(bitmap)
+    fun searchTaskCallback(bitmap: Bitmap?, item: GalleryItem) {
+        mGalleryItem = item
+        bitmap?.let {
+            mImageView.setImageBitmap(bitmap)
+            mImageView.visibility = View.VISIBLE
+        }
+        mProgressBar.visibility = View.GONE
+    }
+
+    fun onClick(v: View) {
+        val uri = mGalleryItem.photoPageUri
+        val i =
+            if (uri.scheme == "http" || uri.scheme == "https")
+                context?.let { context ->
+                    PhotoPageActivity.newIntent(context, uri)
+                }
+            else
+                Intent(Intent.ACTION_VIEW, uri)
+
+        context?.startActivity(i)
     }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         val v = inflater.inflate(R.layout.fragment_locatr, container, false)
         mImageView = v.findViewById(R.id.image) as ImageView
+        mImageView.setOnClickListener(::onClick)
+        mProgressBar = v.findViewById(R.id.progressBar) as ProgressBar
         return v
     }
 

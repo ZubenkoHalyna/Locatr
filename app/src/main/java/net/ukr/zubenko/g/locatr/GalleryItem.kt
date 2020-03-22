@@ -10,7 +10,7 @@ data class GalleryItem(
     val mOwner: String,
     @SerializedName("title")
     val mCaption: String,
-    @SerializedName("url_s")
+    @SerializedName("url_l")
     val mUrl: String) {
 
     val photoPageUri: Uri

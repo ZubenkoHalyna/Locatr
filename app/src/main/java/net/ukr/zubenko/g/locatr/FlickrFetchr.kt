@@ -17,15 +17,14 @@ class FlickrFetchr {
     companion object {
         private const val TAG = "FlickrFetchr"
         private const val API_KEY = "896315495eba9cebbb139ccaee07fb72"
-        private val FETCH_RECENTS_METHOD = "flickr.photos.getRecent"
-        private val SEARCH_METHOD = "flickr.photos.search"
+        private const val SEARCH_METHOD = "flickr.photos.search"
         private val ENDPOINT: Uri = Uri
             .parse("https://api.flickr.com/services/rest/")
             .buildUpon()
             .appendQueryParameter("api_key", API_KEY)
             .appendQueryParameter("format", "json")
             .appendQueryParameter("nojsoncallback", "1")
-            .appendQueryParameter("extras", "url_s")
+            .appendQueryParameter("extras", "url_l")
             .build()
 
         private class SerializedItem(val photos: GalleryItemArray) {
@@ -61,11 +60,13 @@ class FlickrFetchr {
     }
 
     private fun buildUrl(location: Location): String {
-        return ENDPOINT.buildUpon()
+        val x = ENDPOINT.buildUpon()
             .appendQueryParameter("method", SEARCH_METHOD)
             .appendQueryParameter("lat", "" + location.latitude)
             .appendQueryParameter("lon", "" + location.longitude)
             .build().toString()
+        Log.i(TAG, x)
+        return x
     }
 
     private fun downloadGalleryItems(url: String): List<GalleryItem> {
