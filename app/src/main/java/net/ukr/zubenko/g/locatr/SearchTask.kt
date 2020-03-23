@@ -9,12 +9,13 @@ import android.graphics.BitmapFactory
 import android.util.Log
 import java.io.IOException
 import java.util.*
-import kotlin.reflect.KFunction1
+import kotlin.reflect.KFunction2
 
 
 class SearchTask(private val setBitmap: (Bitmap?, GalleryItem) -> Unit) : AsyncTask<Location, Void, Void>() {
     lateinit var mGalleryItem: GalleryItem
     var mBitmap: Bitmap? = null
+    lateinit var mLocation: Location
 
     companion object {
         private val TAG = "LocatrFragment"
@@ -22,7 +23,8 @@ class SearchTask(private val setBitmap: (Bitmap?, GalleryItem) -> Unit) : AsyncT
 
     override fun doInBackground(vararg params: Location): Void? {
         val fetchr = FlickrFetchr()
-        val items = fetchr.searchPhotos(params[0])
+        mLocation = params[0]
+        val items = fetchr.searchPhotos(mLocation)
         if (items.isEmpty()) {
             return null
         }

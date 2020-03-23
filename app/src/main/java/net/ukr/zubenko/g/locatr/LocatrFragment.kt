@@ -4,24 +4,28 @@ import android.Manifest
 import android.annotation.SuppressLint
 import android.app.AlertDialog
 import android.app.Dialog
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 import android.view.*
-import android.widget.ImageView
-import androidx.fragment.app.Fragment
-import com.google.android.gms.common.api.GoogleApiClient
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
-import android.widget.ProgressBar
+import android.location.Location
 import com.google.android.gms.location.*
+import com.google.android.gms.maps.SupportMapFragment
 import net.ukr.zubenko.g.photogallery.GalleryItem
+import com.google.android.gms.maps.GoogleMap
+import com.google.android.gms.maps.CameraUpdateFactory
+import android.text.method.TextKeyListener.clear
+import com.google.android.gms.maps.model.*
 
 
-class LocatrFragment : Fragment() {
-    private lateinit var mImageView: ImageView
-    private lateinit var mProgressBar: ProgressBar
+class LocatrFragment : SupportMapFragment() {
     private lateinit var mGalleryItem: GalleryItem
+    private lateinit var mMapImage: Bitmap
+    private lateinit var mCurrentLocation: Location
+    private lateinit var mMap: GoogleMap
     private lateinit var mFusedLocationClient: FusedLocationProviderClient
 
     companion object {
@@ -40,6 +44,46 @@ class LocatrFragment : Fragment() {
 
         context?.let { context ->
             mFusedLocationClient = LocationServices.getFusedLocationProviderClient(context)
+        }
+
+        getMapAsync {
+            mMap = it
+        }
+    }
+
+    private fun updateUI() {
+        if (::mMap.isInitialized && ::mMapImage.isInitialized) {
+            val itemPoint = LatLng(mGalleryItem.mLat, mGalleryItem.mLon)
+            val myPoint = LatLng(mCurrentLocation.latitude, mCurrentLocation.longitude)
+
+            val itemBitmap = BitmapDescriptorFactory.fromBitmap(mMapImage)
+            val itemMarker = MarkerOptions()
+                .position(itemPoint)
+                .title("photo")
+                .icon(itemBitmap)
+            val picMarker = MarkerOptions()
+                .position(itemPoint)
+            val myMarker = MarkerOptions()
+                .position(myPoint)
+            mMap.clear()
+            mMap.addMarker(itemMarker)
+            mMap.addMarker(myMarker)
+            mMap.addMarker(picMarker)
+            mMap.setOnMarkerClickListener { marker ->
+                if (marker.title == itemMarker.title)
+                    context?.let { context ->
+                        onClick(View(context))
+                    }
+                true
+            }
+
+            val bounds = LatLngBounds.Builder()
+                .include(itemPoint)
+                .include(myPoint)
+                .build()
+            val margin = resources.getDimensionPixelSize(R.dimen.map_inset_margin)
+            val update = CameraUpdateFactory.newLatLngBounds(bounds, margin)
+            mMap.animateCamera(update)
         }
     }
 
@@ -97,11 +141,8 @@ class LocatrFragment : Fragment() {
         val callback = object : LocationCallback() {
             override fun onLocationResult(locationResult: LocationResult?) {
                 super.onLocationResult(locationResult)
-
-                mImageView.visibility = View.GONE
-                mProgressBar.visibility = View.VISIBLE
-
                 locationResult?.lastLocation?.let { location ->
+                    mCurrentLocation = location
                     Log.i(TAG, "Got a fix: ${location.latitude}, ${location.longitude}")
                     SearchTask(::searchTaskCallback).execute(location)
                 }
@@ -114,10 +155,9 @@ class LocatrFragment : Fragment() {
     fun searchTaskCallback(bitmap: Bitmap?, item: GalleryItem) {
         mGalleryItem = item
         bitmap?.let {
-            mImageView.setImageBitmap(bitmap)
-            mImageView.visibility = View.VISIBLE
+            mMapImage = bitmap
         }
-        mProgressBar.visibility = View.GONE
+        updateUI()
     }
 
     fun onClick(v: View) {
@@ -131,14 +171,6 @@ class LocatrFragment : Fragment() {
                 Intent(Intent.ACTION_VIEW, uri)
 
         context?.startActivity(i)
-    }
-
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
-        val v = inflater.inflate(R.layout.fragment_locatr, container, false)
-        mImageView = v.findViewById(R.id.image) as ImageView
-        mImageView.setOnClickListener(::onClick)
-        mProgressBar = v.findViewById(R.id.progressBar) as ProgressBar
-        return v
     }
 
     override fun onCreateOptionsMenu(menu: Menu, inflater: MenuInflater) {

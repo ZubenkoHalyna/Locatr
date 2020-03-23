@@ -10,8 +10,12 @@ data class GalleryItem(
     val mOwner: String,
     @SerializedName("title")
     val mCaption: String,
-    @SerializedName("url_l")
-    val mUrl: String) {
+    @SerializedName("url_s")
+    val mUrl: String,
+    @SerializedName("latitude")
+    val mLat: Double,
+    @SerializedName("longitude")
+    val mLon: Double) {
 
     val photoPageUri: Uri
         get() = Uri.parse("https://www.flickr.com/photos/")
